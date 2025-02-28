@@ -10,15 +10,12 @@ export function useProjectNames(projectIds: (string | null)[]) {
     const validProjectIds = [...new Set(projectIds.filter((id): id is string => id !== null))];
     
     if (validProjectIds.length === 0) {
-      console.log('[useProjectNames] Nenhum ID válido para buscar');
       setProjectNames({});
       setLoading(false);
       return;
     }
 
     try {
-      console.log('[useProjectNames] Buscando nomes para projetos:', validProjectIds);
-      
       const { data, error } = await supabase
         .from('conex_projetos')
         .select('uid, nome')
@@ -29,27 +26,20 @@ export function useProjectNames(projectIds: (string | null)[]) {
         throw error;
       }
 
-      console.log('[useProjectNames] Dados retornados:', data);
-
       if (!data || data.length === 0) {
-        console.log('[useProjectNames] Nenhum projeto encontrado para os IDs:', validProjectIds);
         setProjectNames({});
         setLoading(false);
         return;
       }
 
       const namesMap = data.reduce((acc, project) => {
-        if (!project.uid || !project.nome) {
-          console.log('[useProjectNames] Projeto inválido:', project);
-          return acc;
-        }
+        if (!project.uid || !project.nome) return acc;
         return {
           ...acc,
           [project.uid]: project.nome
         };
       }, {} as Record<string, string>);
 
-      console.log('[useProjectNames] Mapa de nomes construído:', namesMap);
       setProjectNames(namesMap);
     } catch (error) {
       console.error('[useProjectNames] Erro ao buscar nomes dos projetos:', error);
@@ -67,14 +57,8 @@ export function useProjectNames(projectIds: (string | null)[]) {
     
     if (validProjectIds.length === 0) return;
 
-    // Cria um nome único para o canal
-    const timestamp = Date.now();
-    const channelName = `project-names-${timestamp}`;
-
-    console.log('[useProjectNames] Configurando realtime:', {
-      canal: channelName,
-      projetos: validProjectIds
-    });
+    // Usa um nome de canal baseado nos IDs dos projetos para ser consistente
+    const channelName = `project-names-${validProjectIds.sort().join('-')}`;
 
     // Configura subscription para mudanças nos projetos
     const channel = supabase.channel(channelName);
@@ -89,28 +73,28 @@ export function useProjectNames(projectIds: (string | null)[]) {
           filter: `uid=in.(${validProjectIds.map(id => `'${id}'`).join(',')})`
         },
         (payload) => {
-          console.log('[useProjectNames] Mudança detectada:', {
-            canal: channelName,
-            evento: payload.eventType,
-            dados: payload.new
-          });
-          
-          // Atualiza os nomes
-          fetchProjectNames();
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            // Atualiza apenas o nome alterado
+            const newData = payload.new as { uid: string; nome: string };
+            if (newData.uid && newData.nome) {
+              setProjectNames(prev => ({
+                ...prev,
+                [newData.uid]: newData.nome
+              }));
+            }
+          } else {
+            // Para outros tipos de eventos, refetch
+            fetchProjectNames();
+          }
         }
       )
-      .subscribe((status) => {
-        console.log('[useProjectNames] Status da subscription:', {
-          canal: channelName,
-          status
-        });
-      });
+      .subscribe();
 
+    // Cleanup: remove subscription
     return () => {
-      console.log('[useProjectNames] Limpando subscription:', channelName);
-      channel.unsubscribe();
+      supabase.removeChannel(channel);
     };
-  }, [projectIds]);
+  }, [projectIds]); // Só recria quando os IDs mudarem
 
   return { projectNames, loading };
 }

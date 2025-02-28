@@ -2,7 +2,7 @@ import React from 'react';
 import useAuthModal from '../../hooks/useAuthModal';
 
 const LoginForm = () => {
-  const { closeModal } = useAuthModal();
+  const { closeModal, setView } = useAuthModal();
 
   return (
     <>
@@ -23,8 +23,20 @@ const LoginForm = () => {
       >
         Entrar
       </button>
+      
+      <div className="mt-6 text-center">
+        <p className="text-gray-300">
+          Não tem conta?{' '}
+          <button 
+            onClick={() => setView('signup')}
+            className="text-emerald-500 hover:text-emerald-400 font-medium transition-colors"
+          >
+            Cadastre-se agora!
+          </button>
+        </p>
+      </div>
     </>
   );
 };
 
-export default LoginForm; 
+export default LoginForm;

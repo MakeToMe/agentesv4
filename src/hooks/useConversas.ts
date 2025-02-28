@@ -6,9 +6,12 @@ import useAuth from '../stores/useAuth';
 export interface Conversa {
   uid: string;
   created_at: string;
-  origem: 'Assistente' | 'Humano' | null;
-  dispositivo: string | null;
-  messageTimestamp: Date | null;
+  mensagem: string | null;
+  origem: string | null;
+  remote_jid: string | null;
+  messageTimestamp: string | null;
+  messageType: string | null;
+  fonte_tipo: string | null;
 }
 
 export interface ContagemPorOrigem {
@@ -16,114 +19,89 @@ export interface ContagemPorOrigem {
   humano: number;
 }
 
-export interface ContagemPorDispositivo {
-  'WhatsApp Web': number;
-  'Android': number;
-  'iOS': number;
-  'Desconhecido': number;
-}
-
-const DISPOSITIVO_NORMALIZADO = {
-  'android': 'Android',
-  'whatsapp android': 'Android',
-  'desktop': 'WhatsApp Web',
-  'whatsapp': 'WhatsApp Web',
-  'whatsapp unknown': 'WhatsApp Web',
-  'ios': 'iOS',
-  'whatsapp web': 'WhatsApp Web',
-  'typebot': 'Typebot',
-  'unknown': 'Desconhecido',
-  'web': 'WhatsApp Web'
-} as const;
-
-type DispositivoNormalizado = typeof DISPOSITIVO_NORMALIZADO[keyof typeof DISPOSITIVO_NORMALIZADO];
-
-export const useConversas = () => {
+export const useConversas = (leadWhatsapp?: string | null) => {
   const { empresaUid } = useAuth();
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [contagem, setContagem] = useState<ContagemPorOrigem>({ assistente: 0, humano: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const normalizarDispositivo = (dispositivo: string | null): DispositivoNormalizado => {
-    if (!dispositivo) return 'Desconhecido';
-    const key = dispositivo.toLowerCase().trim() as keyof typeof DISPOSITIVO_NORMALIZADO;
-    return DISPOSITIVO_NORMALIZADO[key] || 'Desconhecido';
-  };
-
   const fetchConversas = useCallback(async () => {
     if (!empresaUid) {
+      setConversas([]);
       setLoading(false);
       return;
     }
 
     try {
-      // Buscar apenas os últimos 30 dias de conversas
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const { data: conversasData, error: conversasError } = await supabase
+      let query = supabase
         .from('conex_conversas')
-        .select('uid, created_at, dispositivo, origem')
-        .eq('empresa', empresaUid)
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .order('created_at', { ascending: false });
+        .select('*')
+        .eq('empresa', empresaUid);
 
-      if (conversasError) throw conversasError;
+      // Se tiver leadWhatsapp, filtra por ele
+      if (leadWhatsapp) {
+        query = query.eq('remote_jid', leadWhatsapp);
+      }
 
-      const contagemTemp = { assistente: 0, humano: 0 };
-      
-      const conversasNormalizadas = conversasData?.map(conversa => {
-        // Contagem por origem
-        if (conversa.origem === 'Assistente') {
-          contagemTemp.assistente++;
-        } else if (conversa.origem === 'Humano') {
-          contagemTemp.humano++;
-        }
+      // Se não tiver leadWhatsapp, busca apenas últimos 30 dias para o dashboard
+      if (!leadWhatsapp) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        query = query.gte('created_at', thirtyDaysAgo.toISOString());
+      }
 
-        return {
-          ...conversa,
-          dispositivo: normalizarDispositivo(conversa.dispositivo),
-          messageTimestamp: conversa.created_at ? new Date(conversa.created_at) : null
-        };
-      }) || [];
+      const { data, error } = await query.order('created_at', { ascending: true });
 
-      setConversas(conversasNormalizadas);
-      setContagem(contagemTemp);
-      setError(null);
+      if (error) throw error;
+
+      setConversas(data || []);
+
+      // Atualiza contagem apenas se não tiver leadWhatsapp (dashboard)
+      if (!leadWhatsapp) {
+        const contagemTemp = { assistente: 0, humano: 0 };
+        data?.forEach(conversa => {
+          if (conversa.origem === 'Assistente') {
+            contagemTemp.assistente++;
+          } else if (conversa.origem === 'Humano') {
+            contagemTemp.humano++;
+          }
+        });
+        setContagem(contagemTemp);
+      }
     } catch (err) {
-      console.error('[useConversas] Error:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar conversas');
     } finally {
       setLoading(false);
     }
-  }, [empresaUid]);
+  }, [empresaUid, leadWhatsapp]);
 
   useEffect(() => {
     fetchConversas();
 
-    const channelName = `conversas-changes-${empresaUid}-${Date.now()}`;
-    
-    const subscription = supabase
-      .channel(channelName)
+    // Inscrever no canal de realtime
+    const channel = supabase
+      .channel(`conex-conversas-${Date.now()}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'conex_conversas',
-          filter: `empresa=eq.${empresaUid}`
+          filter: `empresa=eq.${empresaUid}`,
         },
         (payload: RealtimePostgresChangesPayload<Conversa>) => {
-          fetchConversas();
+          if (!leadWhatsapp || (payload.new && payload.new.remote_jid === leadWhatsapp)) {
+            fetchConversas();
+          }
         }
       )
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
-  }, [empresaUid, fetchConversas]);
+  }, [empresaUid, leadWhatsapp, fetchConversas]);
 
   return { conversas, contagem, loading, error };
-}; 
+};

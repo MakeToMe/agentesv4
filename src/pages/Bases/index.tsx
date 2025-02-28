@@ -15,7 +15,16 @@ import useAuth from '../../stores/useAuth';
 import { useProjetosSelect } from '../../hooks/useProjetosSelect';
 
 const Bases: React.FC = () => {
-  const { bases, loading: basesLoading, error, deleteBase, addBase, updateBasePrompt } = useKnowledgeBases();
+  const { 
+    bases, 
+    loading: basesLoading, 
+    error, 
+    deleteBase, 
+    addBase, 
+    updateBasePrompt,
+    updateBaseTipo,
+    updateBaseLgpd
+  } = useKnowledgeBases();
   const { userUid, empresaUid } = useAuth();
   const { selectedProject } = useProject();
   const { projetos, loading: loadingProjetos } = useProjetosSelect(empresaUid);
@@ -85,6 +94,14 @@ const Bases: React.FC = () => {
     }
   };
 
+  const handleUpdateTipo = async (base: KnowledgeBase, tipo: string) => {
+    try {
+      await updateBaseTipo(base.uid, tipo);
+    } catch (error) {
+      console.error('Erro ao atualizar tipo:', error);
+    }
+  };
+
   if (loading) {
     return <div className="p-4 text-red-500">Carregando...</div>;
   }
@@ -120,6 +137,18 @@ const Bases: React.FC = () => {
                   onView={(base) => setViewModal({ isOpen: true, base })}
                   onDeleteBase={(base) => setDeleteModal({ isOpen: true, base })}
                   onPersonalizar={(base) => setPersonalizarModal({ isOpen: true, base })}
+                  onUpdateTipo={async (base, tipo) => {
+                    const result = await updateBaseTipo(base.uid, tipo);
+                    if (!result.success) {
+                      console.error('Erro ao atualizar tipo:', result.message);
+                    }
+                  }}
+                  onUpdateLgpd={async (base, lgpd) => {
+                    const result = await updateBaseLgpd(base.uid, lgpd);
+                    if (!result.success) {
+                      console.error('Erro ao atualizar LGPD:', result.message);
+                    }
+                  }}
                 />
               )}
             </div>

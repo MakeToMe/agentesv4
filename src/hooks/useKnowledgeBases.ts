@@ -14,6 +14,9 @@ export interface KnowledgeBase {
   treinamentosuid: string[] | null; // uuid[] null
   projeto: string | null;        // uuid null
   prompt: string | null;         // text null
+  tipo: string | null;          // text null default 'RAG'::text
+  saudacao: string | null;      // text null
+  lgpd: boolean | null;         // boolean null default false
 }
 
 export const useKnowledgeBases = () => {
@@ -174,6 +177,69 @@ export const useKnowledgeBases = () => {
     }
   };
 
+  const updateBaseTipo = async (baseUid: string, tipo: string) => {
+    try {
+      const { error } = await supabase
+        .from('conex-bases_t')
+        .update({ tipo })
+        .eq('uid', baseUid);
+
+      if (error) throw error;
+
+      // Atualiza o estado local
+      setBases(prevBases => 
+        prevBases.map(base => 
+          base.uid === baseUid ? { ...base, tipo } : base
+        )
+      );
+
+      return { success: true };
+    } catch (err) {
+      console.error('[useKnowledgeBases] Erro ao atualizar tipo da base:', err);
+      return { 
+        success: false, 
+        message: err instanceof Error ? err.message : 'Erro ao atualizar tipo da base' 
+      };
+    }
+  };
+
+  const updateBaseLgpd = async (baseUid: string, lgpd: boolean) => {
+    try {
+      // Atualiza o estado local primeiro (otimista)
+      setBases(prevBases => 
+        prevBases.map(base => 
+          base.uid === baseUid ? { ...base, lgpd } : base
+        )
+      );
+
+      // Atualiza no banco de forma silenciosa
+      const { error } = await supabase
+        .from('conex-bases_t')
+        .update({ lgpd })
+        .eq('uid', baseUid)
+        .select()
+        .abortSignal(new AbortController().signal); // Evita que o realtime pegue essa atualização
+
+      if (error) {
+        // Se der erro, reverte o estado local
+        setBases(prevBases => 
+          prevBases.map(base => 
+            base.uid === baseUid ? { ...base, lgpd: !lgpd } : base
+          )
+        );
+        throw error;
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('[useKnowledgeBases] Erro ao atualizar LGPD da base:', err);
+      return { 
+        success: false, 
+        message: err instanceof Error ? err.message : 'Erro ao atualizar LGPD da base' 
+      };
+    }
+  };
+
   useEffect(() => {
     if (!empresaUid) {
       setLoading(false);
@@ -199,13 +265,16 @@ export const useKnowledgeBases = () => {
           filter: `titular=eq.${empresaUid}`
         },
         async (payload) => {
-          console.log('[useKnowledgeBases] Evento realtime recebido:', payload);
+          // Ignora atualizações de LGPD e tipo
+          if (payload.eventType === 'UPDATE') {
+            const changes = Object.keys(payload.new as KnowledgeBase);
+            if (changes.length <= 3 && (changes.includes('lgpd') || changes.includes('tipo'))) {
+              return;
+            }
+          }
           
-          // Força um refetch para garantir dados consistentes
+          // Para outros casos, atualiza normalmente
           await fetchBases();
-
-          // Adiciona log adicional para debug
-          console.log('[useKnowledgeBases] Lista atualizada após evento realtime');
         }
       )
       .subscribe((status) => {
@@ -229,6 +298,8 @@ export const useKnowledgeBases = () => {
     isDeletingBase,
     deleteBase,
     addBase,
-    updateBasePrompt
+    updateBasePrompt,
+    updateBaseTipo,
+    updateBaseLgpd
   };
 };

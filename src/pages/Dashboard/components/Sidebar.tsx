@@ -14,12 +14,13 @@ import {
   MessageCircle,
   Beaker,
   Package2,
-  Database
+  Database,
+  Users
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../../../stores/useAuth';
 
-type ActiveScreen = 'dashboard' | 'treinamentos' | 'assistants' | 'projetos' | 'knowledge-bases' | 'whatsapp' | 'laboratorio' | 'produtos' | 'bases';
+type ActiveScreen = 'dashboard' | 'treinamentos' | 'assistants' | 'projetos' | 'knowledge-bases' | 'whatsapp' | 'laboratorio' | 'produtos' | 'bases' | 'leads';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -57,6 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       else if (screen === 'projetos') navigate('/projetos');
       else if (screen === 'treinamentos') navigate('/treinamentos');
       else if (screen === 'produtos') navigate('/produtos');
+      else if (screen === 'leads') navigate('/leads');
       else if (screen === 'laboratorio') navigate('/laboratorio');
       else if (screen === 'bases') navigate('/bases');
     }
@@ -106,6 +108,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       screen: 'produtos' as ActiveScreen,
       path: '/produtos',
       active: activeScreen === 'produtos'
+    },
+    {
+      icon: Users,
+      label: 'Leads',
+      screen: 'leads' as ActiveScreen,
+      path: '/leads',
+      active: activeScreen === 'leads'
     },
     {
       icon: Beaker,

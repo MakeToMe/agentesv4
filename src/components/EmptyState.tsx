@@ -1,19 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import type { LucideIcon } from 'lucide-react';
-
-type IconProps = {
-  size?: number;
-  style?: React.CSSProperties;
-};
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: React.ReactNode;
   title: string;
   description: string;
 }
 
-export const EmptyState = ({ icon: Icon, title, description }: EmptyStateProps) => {
+export const EmptyState = ({ icon, title, description }: EmptyStateProps) => {
   return (
     <div className="w-full px-4">
       <div className="max-w-[1370px] mx-auto">
@@ -31,7 +25,7 @@ export const EmptyState = ({ icon: Icon, title, description }: EmptyStateProps) 
             className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
             style={{ backgroundColor: 'var(--accent-color-transparent)' }}
           >
-            <Icon size={32} style={{ color: 'var(--accent-color)' }} />
+            {icon}
           </div>
           <h2 
             className="text-2xl font-bold mb-2"

@@ -13,6 +13,7 @@ import { KnowledgeBaseProvider } from './contexts/KnowledgeBaseContext';
 import './config/chartConfig';
 import Produtos from './pages/Produtos';
 import Bases from './pages/Bases';
+import Leads from './pages/Leads';
 
 const App: React.FC = () => {
   return (
@@ -30,6 +31,7 @@ const App: React.FC = () => {
             <Route path="/bases" element={<Bases />} />
             <Route path="/treinamentos" element={<Treinamentos />} />
             <Route path="/produtos" element={<Produtos />} />
+            <Route path="/leads" element={<Leads />} />
             <Route path="/laboratorio" element={<Laboratorio />} />
           </Route>
 

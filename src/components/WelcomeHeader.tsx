@@ -6,30 +6,42 @@ import { useProject } from '../contexts/ProjectContext';
 import ThemeToggle from './ThemeToggle';
 import { ChevronDown, FolderOpen } from 'lucide-react';
 
-type RouteType = 'dashboard' | 'projetos' | 'whatsapp' | 'treinamentos' | 'laboratorio' | 'bases';
+type RouteType = 'dashboard' | 'training' | 'assistants' | 'projetos' | 'whatsapp' | 'laboratorio' | 'produtos' | 'bases' | 'leads';
 
 interface WelcomeHeaderProps {
   route?: RouteType;
+  hideProjectSelector?: boolean;
 }
 
 const getWelcomeMessage = (route: RouteType) => {
   switch (route) {
+    case 'dashboard':
+      return 'ao seu Dashboard';
+    case 'training':
+      return 'aos seus Treinamentos';
+    case 'assistants':
+      return 'aos seus Assistentes';
     case 'projetos':
       return 'aos seus Projetos';
     case 'whatsapp':
       return 'ao WhatsApp';
-    case 'treinamentos':
-      return 'aos seus Treinamentos';
     case 'laboratorio':
       return 'ao Laboratório';
+    case 'produtos':
+      return 'aos seus Produtos';
     case 'bases':
-      return 'às suas Bases de Conhecimento';
+      return 'às suas Bases';
+    case 'leads':
+      return 'Bem-vindo aos seus Leads';
     default:
-      return 'ao seu Dashboard';
+      return '';
   }
 };
 
-const WelcomeHeader: React.FC<WelcomeHeaderProps> = ({ route = 'dashboard' }) => {
+const WelcomeHeader: React.FC<WelcomeHeaderProps> = ({ 
+  route = 'dashboard',
+  hideProjectSelector = false 
+}) => {
   const { userData } = useUser();
   const { empresaUid } = useAuth();
   const { projetos } = useProjetos(empresaUid);
@@ -61,9 +73,9 @@ const WelcomeHeader: React.FC<WelcomeHeaderProps> = ({ route = 'dashboard' }) =>
           </div>
         </div>
 
-        {projetos && projetos.length > 0 && (
+        {projetos && projetos.length > 0 && !hideProjectSelector && (
           <div 
-            className="rounded-lg p-4 mb-6"
+            className="rounded-lg p-6 mb-6"
             style={{ backgroundColor: 'var(--sidebar-bg)' }}
           >
             <div className="flex items-center gap-2">
