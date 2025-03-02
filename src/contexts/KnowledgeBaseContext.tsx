@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import useAuth from '../stores/useAuth';
 
 interface KnowledgeBaseContextType {
   selectedKnowledgeBase: string;
@@ -10,30 +11,45 @@ const STORAGE_KEY = 'laboratorioSelectedBase';
 const KnowledgeBaseContext = createContext<KnowledgeBaseContextType | undefined>(undefined);
 
 export const KnowledgeBaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  const isDev = import.meta.env.DEV;
+  
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      console.log('Valor inicial da base no localStorage:', saved);
+      if (isDev && isAuthenticated) {
+        console.log('Valor inicial da base no localStorage:', saved);
+      }
       return saved || 'all';
     } catch (error) {
-      console.error('Erro ao ler base do localStorage:', error);
+      if (isDev && isAuthenticated) {
+        console.error('Erro ao ler base do localStorage:', error);
+      }
       return 'all';
     }
   });
 
   useEffect(() => {
-    console.log('Estado atual da selectedKnowledgeBase:', selectedKnowledgeBase);
-    console.log('Valor atual no localStorage:', localStorage.getItem(STORAGE_KEY));
-  }, [selectedKnowledgeBase]);
+    if (isDev && isAuthenticated) {
+      console.log('Estado atual da selectedKnowledgeBase:', selectedKnowledgeBase);
+      console.log('Valor atual no localStorage:', localStorage.getItem(STORAGE_KEY));
+    }
+  }, [selectedKnowledgeBase, isAuthenticated]);
 
   const handleSetSelectedKnowledgeBase = (base: string) => {
-    console.log('Alterando base para:', base);
+    if (isDev && isAuthenticated) {
+      console.log('Alterando base para:', base);
+    }
     try {
       localStorage.setItem(STORAGE_KEY, base);
       setSelectedKnowledgeBase(base);
-      console.log('Base salva no localStorage:', localStorage.getItem(STORAGE_KEY));
+      if (isDev && isAuthenticated) {
+        console.log('Base salva no localStorage:', localStorage.getItem(STORAGE_KEY));
+      }
     } catch (error) {
-      console.error('Erro ao salvar base:', error);
+      if (isDev && isAuthenticated) {
+        console.error('Erro ao salvar base:', error);
+      }
     }
   };
 

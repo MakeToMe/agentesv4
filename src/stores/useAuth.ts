@@ -11,7 +11,7 @@ interface AuthState {
   userUid: string | null;
   empresaUid: string | null;
   userData: UserData | null;
-  setAuth: (userUid: string, empresaUid: string, userData: UserData) => void;
+  setAuth: (userUid: string, empresaUid: string, userData?: UserData) => void;
   clearAuth: () => void;
 }
 
@@ -21,7 +21,7 @@ const useAuth = create<AuthState>()(
       userUid: null,
       empresaUid: null,
       userData: null,
-      setAuth: (userUid, empresaUid, userData) => set({ userUid, empresaUid, userData }),
+      setAuth: (userUid, empresaUid, userData = null) => set({ userUid, empresaUid, userData }),
       clearAuth: () => {
         // Limpa o localStorage manualmente
         if (typeof window !== 'undefined') {

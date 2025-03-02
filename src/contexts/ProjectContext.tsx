@@ -12,15 +12,21 @@ const STORAGE_KEY = 'dashboardSelectedProject';
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { empresaUid } = useAuth();
+  const { empresaUid, isAuthenticated } = useAuth();
   const { projetos } = useProjetosGlobal(empresaUid);
+  const isDev = import.meta.env.DEV;
+  
   const [selectedProject, setSelectedProject] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      console.log('Valor inicial do localStorage:', saved);
+      if (isDev && isAuthenticated) {
+        console.log('Valor inicial do localStorage:', saved);
+      }
       return saved || 'all';
     } catch (error) {
-      console.error('Erro ao ler do localStorage:', error);
+      if (isDev && isAuthenticated) {
+        console.error('Erro ao ler do localStorage:', error);
+      }
       return 'all';
     }
   });
@@ -30,25 +36,35 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (selectedProject !== 'all' && projetos.length > 0) {
       const projetoExiste = projetos.some(p => p.uid === selectedProject);
       if (!projetoExiste) {
-        console.log('Projeto selecionado não existe mais, resetando para "all"');
+        if (isDev && isAuthenticated) {
+          console.log('Projeto selecionado não existe mais, resetando para "all"');
+        }
         handleSetSelectedProject('all');
       }
     }
-  }, [projetos, selectedProject]);
+  }, [projetos, selectedProject, isAuthenticated]);
 
   useEffect(() => {
-    console.log('Estado atual do selectedProject:', selectedProject);
-    console.log('Valor atual no localStorage:', localStorage.getItem(STORAGE_KEY));
-  }, [selectedProject]);
+    if (isDev && isAuthenticated) {
+      console.log('Estado atual do selectedProject:', selectedProject);
+      console.log('Valor atual no localStorage:', localStorage.getItem(STORAGE_KEY));
+    }
+  }, [selectedProject, isAuthenticated]);
 
   const handleSetSelectedProject = (project: string) => {
-    console.log('Alterando projeto para:', project);
+    if (isDev && isAuthenticated) {
+      console.log('Alterando projeto para:', project);
+    }
     try {
       localStorage.setItem(STORAGE_KEY, project);
       setSelectedProject(project);
-      console.log('Projeto salvo no localStorage:', localStorage.getItem(STORAGE_KEY));
+      if (isDev && isAuthenticated) {
+        console.log('Projeto salvo no localStorage:', localStorage.getItem(STORAGE_KEY));
+      }
     } catch (error) {
-      console.error('Erro ao salvar projeto:', error);
+      if (isDev && isAuthenticated) {
+        console.error('Erro ao salvar projeto:', error);
+      }
     }
   };
 

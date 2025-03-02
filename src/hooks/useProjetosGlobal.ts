@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import useAuth from '../stores/useAuth';
 
 const TABLE_NAME = 'conex_projetos';
 
@@ -17,6 +18,8 @@ export const useProjetosGlobal = (empresaUid: string | null) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const isDev = import.meta.env.DEV;
 
   const fetchProjetos = async () => {
     if (!empresaUid) {
@@ -25,7 +28,9 @@ export const useProjetosGlobal = (empresaUid: string | null) => {
     }
 
     try {
-      console.log('Buscando projetos globais para empresa:', empresaUid);
+      if (isDev && isAuthenticated) {
+        console.log('Buscando projetos globais para empresa:', empresaUid);
+      }
       
       const { data, error } = await supabase
         .from(TABLE_NAME)
@@ -34,19 +39,25 @@ export const useProjetosGlobal = (empresaUid: string | null) => {
         .eq('ativo', true);
 
       if (error) {
-        console.error('Erro ao buscar projetos globais:', error);
+        if (isDev && isAuthenticated) {
+          console.error('Erro ao buscar projetos globais:', error);
+        }
         throw error;
       }
 
-      console.log('Projetos globais encontrados:', {
-        total: data?.length || 0,
-        empresaUid,
-        projetos: data
-      });
+      if (isDev && isAuthenticated) {
+        console.log('Projetos globais encontrados:', {
+          total: data?.length || 0,
+          empresaUid,
+          projetos: data
+        });
+      }
       
       setProjetos(data || []);
     } catch (err) {
-      console.error('Erro ao buscar projetos globais:', err);
+      if (isDev && isAuthenticated) {
+        console.error('Erro ao buscar projetos globais:', err);
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -55,7 +66,9 @@ export const useProjetosGlobal = (empresaUid: string | null) => {
 
   useEffect(() => {
     if (!empresaUid) {
-      console.log('Sem empresaUid disponível, pulando subscription global');
+      if (isDev && isAuthenticated) {
+        console.log('Sem empresaUid disponível, pulando subscription global');
+      }
       return;
     }
 
@@ -63,10 +76,12 @@ export const useProjetosGlobal = (empresaUid: string | null) => {
     const timestamp = Date.now();
     const channelName = `projetos-global-changes-${empresaUid}-${timestamp}`;
     
-    console.log('Configurando subscription global de projetos:', {
-      empresa: empresaUid,
-      canal: channelName
-    });
+    if (isDev && isAuthenticated) {
+      console.log('Configurando subscription global de projetos:', {
+        empresa: empresaUid,
+        canal: channelName
+      });
+    }
 
     const channel = supabase.channel(channelName);
 
@@ -80,21 +95,25 @@ export const useProjetosGlobal = (empresaUid: string | null) => {
           filter: `empresa=eq.${empresaUid}`
         },
         (payload) => {
-          console.log('Mudança em projetos globais recebida:', {
-            canal: channelName,
-            evento: payload.eventType,
-            novo: payload.new,
-            antigo: payload.old
-          });
+          if (isDev && isAuthenticated) {
+            console.log('Mudança em projetos globais recebida:', {
+              canal: channelName,
+              evento: payload.eventType,
+              novo: payload.new,
+              antigo: payload.old
+            });
+          }
           // Sempre busca novamente para garantir consistência
           fetchProjetos();
         }
       )
       .subscribe((status) => {
-        console.log('Status da subscription global:', {
-          canal: channelName,
-          status
-        });
+        if (isDev && isAuthenticated) {
+          console.log('Status da subscription global:', {
+            canal: channelName,
+            status
+          });
+        }
         if (status === 'SUBSCRIBED') {
           setIsSubscribed(true);
           fetchProjetos();
@@ -102,14 +121,16 @@ export const useProjetosGlobal = (empresaUid: string | null) => {
       });
 
     return () => {
-      console.log('Limpando subscription global:', {
-        canal: channelName,
-        empresa: empresaUid
-      });
+      if (isDev && isAuthenticated) {
+        console.log('Limpando subscription global:', {
+          canal: channelName,
+          empresa: empresaUid
+        });
+      }
       channel.unsubscribe();
       setIsSubscribed(false);
     };
-  }, [empresaUid]);
+  }, [empresaUid, isAuthenticated]);
 
   return { projetos, loading, error, isSubscribed };
 };
