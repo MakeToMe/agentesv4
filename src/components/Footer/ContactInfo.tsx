@@ -5,17 +5,17 @@ import { MapPin, Phone, Mail } from 'lucide-react';
 const contactInfo = [
   {
     icon: <MapPin size={20} />,
-    text: 'Rua Exemplo, 123 - São Paulo, SP',
+    text: 'Rua Rio Pardo, 100 cj 205 - Esteio - RS',
   },
   {
     icon: <Phone size={20} />,
-    text: '(11) 1234-5678',
-    href: 'tel:+551112345678',
+    text: '51 98526-0606',
+    href: 'tel:+5551985260606',
   },
   {
     icon: <Mail size={20} />,
-    text: 'contato@conexia.com',
-    href: 'mailto:contato@conexia.com',
+    text: 'jonas@conexi9.com.br',
+    href: 'mailto:jonas@conexi9.com.br',
   },
 ];
 
