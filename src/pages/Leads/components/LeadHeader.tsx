@@ -11,7 +11,7 @@ const LeadHeader: React.FC<LeadHeaderProps> = ({
   onViewTypeChange,
 }) => {
   return (
-    <div className="flex justify-between items-center bg-[var(--bg-primary)] rounded-lg h-[72px] py-0">
+    <div className="flex justify-between items-center bg-[var(--bg-primary)] rounded-lg h-[72px] py-0 px-6">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <Users className="w-6 h-6 text-[var(--accent-color)]" />

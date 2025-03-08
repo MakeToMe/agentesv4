@@ -65,35 +65,36 @@ export const Leads: React.FC = () => {
       ) : (
         <>
           <div className="max-w-[1370px] mx-auto w-full">
-            {/* Seletor de projetos - só aparece quando não está no chat */}
-            <div className="bg-[var(--bg-primary)] rounded-lg px-6 py-0 mb-6">
-              <LeadHeader viewType={viewType} onViewTypeChange={setViewType} />
-            </div>
-            
-            <div>
-              {leads.length === 0 ? (
-                <EmptyState
-                  icon={<Users className="w-10 h-10 text-gray-400" />}
-                  title="Nenhum lead encontrado"
-                  description={
-                    selectedProject === 'all'
-                      ? "Você ainda não tem leads cadastrados."
-                      : "Nenhum lead encontrado para o projeto selecionado."
-                  }
-                />
-              ) : viewType === 'table' ? (
-                <LeadTable
-                  leads={leads}
-                  onStatusChange={handleStatusChange}
-                  onView={handleView}
-                />
-              ) : (
-                <LeadGrid
-                  leads={leads}
-                  onStatusChange={handleStatusChange}
-                  onView={handleView}
-                />
-              )}
+            <div className="space-y-6">
+              <div>
+                <LeadHeader viewType={viewType} onViewTypeChange={setViewType} />
+              </div>
+              
+              <div className="px-6">
+                {leads.length === 0 ? (
+                  <EmptyState
+                    icon={<Users className="w-10 h-10 text-gray-400" />}
+                    title="Nenhum lead encontrado"
+                    description={
+                      selectedProject === 'all'
+                        ? "Você ainda não tem leads cadastrados."
+                        : "Nenhum lead encontrado para o projeto selecionado."
+                    }
+                  />
+                ) : viewType === 'table' ? (
+                  <LeadTable
+                    leads={leads}
+                    onStatusChange={handleStatusChange}
+                    onView={handleView}
+                  />
+                ) : (
+                  <LeadGrid
+                    leads={leads}
+                    onStatusChange={handleStatusChange}
+                    onView={handleView}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </>
