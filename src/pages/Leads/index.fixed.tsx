@@ -50,12 +50,12 @@ export const Leads: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full">
       <WelcomeHeader route="leads" hideProjectSelector={!!selectedLead} />
       
       {selectedLead ? (
-        <div className="w-full px-6">
-          <div className="max-w-[1370px] mx-auto">
+        <div className="max-w-[1370px] mx-auto w-full">
+          <div>
             <LeadChatContainer 
               lead={selectedLead} 
               onBack={handleBack}
@@ -64,38 +64,36 @@ export const Leads: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="w-full px-6">
-            <div className="max-w-[1370px] mx-auto">
-              <div className="space-y-6 w-full">
-                <div className="w-full">
-                  <LeadHeader viewType={viewType} onViewTypeChange={setViewType} />
-                </div>
-                
-                <div className="w-full">
-                  {leads.length === 0 ? (
-                    <EmptyState
-                      icon={<Users className="w-10 h-10 text-gray-400" />}
-                      title="Nenhum lead encontrado"
-                      description={
-                        selectedProject === 'all'
-                          ? "Você ainda não tem leads cadastrados."
-                          : "Nenhum lead encontrado para o projeto selecionado."
-                      }
-                    />
-                  ) : viewType === 'table' ? (
-                    <LeadTable
-                      leads={leads}
-                      onStatusChange={handleStatusChange}
-                      onView={handleView}
-                    />
-                  ) : (
-                    <LeadGrid
-                      leads={leads}
-                      onStatusChange={handleStatusChange}
-                      onView={handleView}
-                    />
-                  )}
-                </div>
+          <div className="max-w-[1370px] mx-auto w-full">
+            <div className="space-y-6">
+              <div className="px-6">
+                <LeadHeader viewType={viewType} onViewTypeChange={setViewType} />
+              </div>
+              
+              <div className="px-6">
+                {leads.length === 0 ? (
+                  <EmptyState
+                    icon={<Users className="w-10 h-10 text-gray-400" />}
+                    title="Nenhum lead encontrado"
+                    description={
+                      selectedProject === 'all'
+                        ? "Você ainda não tem leads cadastrados."
+                        : "Nenhum lead encontrado para o projeto selecionado."
+                    }
+                  />
+                ) : viewType === 'table' ? (
+                  <LeadTable
+                    leads={leads}
+                    onStatusChange={handleStatusChange}
+                    onView={handleView}
+                  />
+                ) : (
+                  <LeadGrid
+                    leads={leads}
+                    onStatusChange={handleStatusChange}
+                    onView={handleView}
+                  />
+                )}
               </div>
             </div>
           </div>

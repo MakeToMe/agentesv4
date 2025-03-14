@@ -1,12 +1,12 @@
 import React from 'react';
-import { Database, X, Eye } from 'lucide-react';
+import { Database, Eye } from 'lucide-react';
 import { KnowledgeBase } from '../../../hooks/useKnowledgeBases';
 import { Dialog } from '@headlessui/react';
 import { formatDate } from '../../../utils/formatDate';
 import { useProjetos } from '../../../hooks/useProjetos';
 import useAuth from '../../../stores/useAuth';
 
-const S3_BASE_URL = 'https://s3.conexcondo.com.br/conexia-v2/';
+const S3_BASE_URL = 'https://newapi.conexcondo.com.br/conexia-v2/';
 
 interface ModalViewBaseProps {
   isOpen: boolean;
@@ -20,15 +20,60 @@ const ModalViewBase: React.FC<ModalViewBaseProps> = ({
   base
 }) => {
   const { empresaUid } = useAuth();
-  const { projetos, loading: projetosLoading } = useProjetos(empresaUid);
+  const { projetos, loading: projetosLoading, fetchProjetos } = useProjetos(empresaUid);
 
   // Criar um mapa de projetos para acesso rápido
   const projetosMap = React.useMemo(() => {
-    return projetos.reduce((acc, projeto) => {
+    console.log('Projetos disponíveis:', projetos);
+    const map = projetos.reduce((acc, projeto) => {
       acc[projeto.uid] = projeto;
       return acc;
     }, {} as Record<string, typeof projetos[0]>);
+    console.log('Mapa de projetos criado:', map);
+    return map;
   }, [projetos]);
+
+  // Buscar o nome do projeto diretamente quando necessário
+  const getProjetoNome = React.useCallback(() => {
+    if (!base?.projeto) return '-';
+    if (projetosLoading) return null; // Ainda carregando
+    
+    // Verificar se o projeto existe no mapa
+    const projeto = projetosMap[base.projeto];
+    if (projeto) {
+      console.log('Projeto encontrado no mapa:', projeto);
+      return projeto.nome;
+    }
+    
+    // Se não encontrou no mapa mas tem o ID do projeto
+    console.log('Projeto não encontrado no mapa, mas tem ID:', base.projeto);
+    return 'Projeto não encontrado';
+  }, [base, projetosMap, projetosLoading]);
+
+  // Nome do projeto para exibição
+  const projetoNome = getProjetoNome();
+  
+  // Função para recarregar projetos manualmente
+  const handleReloadProjetos = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Recarregando projetos manualmente');
+    fetchProjetos();
+  }, [fetchProjetos]);
+
+  // Log para depuração do projeto da base
+  React.useEffect(() => {
+    if (base) {
+      console.log('Detalhes da base:', {
+        baseUid: base.uid,
+        projetoUid: base.projeto,
+        projetosLoading,
+        projetosMapKeys: Object.keys(projetosMap),
+        projetoEncontrado: base.projeto ? !!projetosMap[base.projeto] : false,
+        projetoNome: projetoNome
+      });
+    }
+  }, [base, projetosLoading, projetosMap, projetoNome]);
 
   const handleViewContent = (content: string) => {
     const url = `${S3_BASE_URL}${content}`;
@@ -90,27 +135,37 @@ const ModalViewBase: React.FC<ModalViewBaseProps> = ({
                     <div className="grid grid-cols-2 gap-6">
                       <div>
                         <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Nome</span>
-                        <p className="text-lg" style={{ color: 'var(--text-primary)' }}>
+                        <div className="text-lg" style={{ color: 'var(--text-primary)' }}>
                           {base.nome ? base.nome.split('_')[0] : '-'}
-                        </p>
+                        </div>
                       </div>
                       <div>
                         <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Projeto</span>
-                        <p className="text-lg" style={{ color: 'var(--text-primary)' }}>
+                        <div className="text-lg" style={{ color: 'var(--text-primary)' }}>
                           {projetosLoading ? (
                             <div className="h-6 w-32 animate-pulse rounded bg-gray-700/50"></div>
                           ) : (
-                            base.projeto ? projetosMap[base.projeto]?.nome || 'Projeto não encontrado' : '-'
+                            <>
+                              {projetoNome || '-'}
+                              {projetoNome === 'Projeto não encontrado' && (
+                                <button 
+                                  onClick={handleReloadProjetos}
+                                  className="ml-2 text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30"
+                                >
+                                  Recarregar
+                                </button>
+                              )}
+                            </>
                           )}
-                        </p>
+                        </div>
                       </div>
                       <div>
                         <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Treinamentos</span>
-                        <p className="text-lg" style={{ color: 'var(--text-primary)' }}>{base.treinamentos_qtd || 0}</p>
+                        <div className="text-lg" style={{ color: 'var(--text-primary)' }}>{base.treinamentos_qtd || 0}</div>
                       </div>
                       <div>
                         <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Criada em</span>
-                        <p className="text-lg" style={{ color: 'var(--text-primary)' }}>{formatDate(base.created_at)}</p>
+                        <div className="text-lg" style={{ color: 'var(--text-primary)' }}>{formatDate(base.created_at)}</div>
                       </div>
                     </div>
 

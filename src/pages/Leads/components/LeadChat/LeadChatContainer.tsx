@@ -99,12 +99,13 @@ export const LeadChatContainer: React.FC<LeadChatContainerProps> = ({ lead, onBa
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Digite sua mensagem..."
+            placeholder="Em breve"
             className="flex-1 bg-transparent border border-[var(--border-color)] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-[var(--text-primary)]"
+            disabled
           />
           <button
             type="submit"
-            disabled={!inputMessage.trim() || sending}
+            disabled={true}
             className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-500"
           >
             {sending ? (

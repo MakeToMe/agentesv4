@@ -11,9 +11,9 @@ const LeadHeader: React.FC<LeadHeaderProps> = ({
   onViewTypeChange,
 }) => {
   return (
-    <div className="flex justify-between items-center bg-[var(--bg-primary)] rounded-lg h-[72px] py-0">
-      <div className="flex items-center gap-3 pl-6">
-        <div className="flex items-center gap-2">
+    <div className="flex justify-between items-center bg-[var(--bg-primary)] rounded-lg h-[72px] py-0 px-6">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 pl-2">
           <Users className="w-6 h-6 text-[var(--accent-color)]" />
           <h2 className="text-xl font-bold text-[var(--text-primary)]">
             Leads
@@ -49,9 +49,6 @@ const LeadHeader: React.FC<LeadHeaderProps> = ({
             <LayoutGrid className="w-5 h-5" />
           </button>
         </div>
-      </div>
-      <div className="pr-6">
-        {/* Espaço para garantir o padding à direita */}
       </div>
     </div>
   );

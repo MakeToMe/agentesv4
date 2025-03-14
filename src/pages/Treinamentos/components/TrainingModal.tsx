@@ -1,11 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, 
   FileText, 
   Upload, 
   Check,
-  XCircle,
   Clock,
   FileCheck,
   BookOpen,
@@ -87,9 +85,11 @@ const TrainingModal = ({
   useEffect(() => {
     if (!isOpen || !trainingId) return;
 
-    setPhase(currentPhase);
+    if (currentPhase) {
+      setPhase(currentPhase);
+    }
 
-    const channel = supabase.channel('custom-training-phase')
+    const channel = supabase.channel(`custom-training-phase-${trainingId}`)
       .on(
         'postgres_changes',
         {
@@ -248,7 +248,7 @@ const TrainingModal = ({
                         <option value="">Selecione uma base</option>
                         {bases.map((base) => (
                           <option key={base.uid} value={base.uid}>
-                            {base.nome.split('_')[0]}
+                            {base.nome?.split('_')[0] || 'Base sem nome'}
                           </option>
                         ))}
                       </select>

@@ -24,6 +24,7 @@ export const useProjetos = (empresaUid: string | null) => {
       return;
     }
 
+    setLoading(true);
     try {
       console.log('Buscando projetos para empresa:', empresaUid);
       
@@ -111,5 +112,5 @@ export const useProjetos = (empresaUid: string | null) => {
     };
   }, [empresaUid]);
 
-  return { projetos, loading, error, isSubscribed };
+  return { projetos, loading, error, isSubscribed, fetchProjetos };
 };

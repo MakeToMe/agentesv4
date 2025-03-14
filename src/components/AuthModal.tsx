@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User } from 'lucide-react';
+import { X, LogIn, UserPlus } from 'lucide-react';
 import { IMaskInput } from 'react-imask';
 import useAuthModal from '../hooks/useAuthModal';
 import useAuth from '../stores/useAuth';
@@ -26,8 +26,12 @@ const AuthModal = () => {
     cnpj: '',
     email: '',
     whatsapp: '',
+    nome: '',     // Nome do usuário
+    senha: '',    // Senha do usuário
+    empresaNome: '', // Nome da empresa retornado pela API
   });
   const [showSignupConfirmation, setShowSignupConfirmation] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const tokenRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleTokenChange = (index: number, value: string) => {
@@ -153,15 +157,24 @@ const AuthModal = () => {
   const handleReset = () => {
     setInputValue('');
     setError('');
+    setSuccessMessage('');
     setShowTokenInput(false);
     setToken(['', '', '', '', '', '']);
-    setUserData(null);
+    setShowSignupConfirmation(false);
+    setSignupData({
+      cnpj: '',
+      email: '',
+      whatsapp: '',
+      nome: '',
+      senha: '',
+      empresaNome: ''
+    });
   };
 
   const handleViewChange = (newView: 'login' | 'signup') => {
     handleReset(); // Limpa o formulário ao trocar de view
     setView(newView);
-    setSignupData({ cnpj: '', email: '', whatsapp: '' }); // Reset signup data
+    setSignupData({ cnpj: '', email: '', whatsapp: '', nome: '', senha: '', empresaNome: '' }); // Reset signup data
   };
 
   const handleSignupInputChange = (field: keyof typeof signupData, value: string) => {
@@ -170,10 +183,18 @@ const AuthModal = () => {
   };
 
   const isSignupValid = () => {
+    if (showSignupConfirmation) {
+      // Validação dos campos da tela de confirmação
+      return (
+        signupData.whatsapp.replace(/\D/g, '').length === 11 &&
+        signupData.nome.trim() !== '' &&
+        signupData.senha.trim() !== ''
+      );
+    }
+    // Validação inicial (apenas CNPJ e email)
     return (
       signupData.cnpj.replace(/\D/g, '').length === 14 &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupData.email) &&
-      signupData.whatsapp.replace(/\D/g, '').length === 11
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupData.email)
     );
   };
 
@@ -190,19 +211,74 @@ const AuthModal = () => {
         body: JSON.stringify({
           cnpj: signupData.cnpj.replace(/\D/g, ''),
           email: signupData.email,
-          whatsapp: signupData.whatsapp.replace(/\D/g, ''),
         }),
       });
 
       const data = await response.json();
 
-      if (data.cadastro === 'iniciado') {
-        setShowSignupConfirmation(true);
+      if (data.acao === 'cadastroEmpresa') {
+        if (data.status === 'ok') {
+          // Limpar os campos do formulário de confirmação, mantendo apenas os dados da empresa
+          setSignupData(prev => ({
+            ...prev,
+            empresaNome: data.empresaNome,
+            whatsapp: '',
+            nome: '',
+            senha: ''
+          }));
+          setShowSignupConfirmation(true);
+        } else if (data.status === 'cnpjInvalido') {
+          setError('CNPJ inválido. Por favor, verifique e tente novamente.');
+        } else {
+          setError('Erro ao iniciar cadastro. Por favor, tente novamente.');
+        }
       } else {
-        setError('Erro ao iniciar cadastro. Por favor, tente novamente.');
+        setError('Resposta inválida do servidor. Por favor, tente novamente.');
       }
     } catch (err) {
       setError('Erro ao conectar com o servidor. Por favor, tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignupConfirmation = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+
+      const response = await fetch('https://webhook.conexcondo.com.br/webhook/validar_cadastro', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          acao: 'concluir',
+          empresaCnpj: signupData.cnpj.replace(/\D/g, ''),
+          whatsapp: signupData.whatsapp.replace(/\D/g, ''),
+          nome: signupData.nome,
+          senha: signupData.senha
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.user === 'criado') {
+        // Sucesso: usuário criado
+        handleReset(); // Limpa o formulário
+        setShowSignupConfirmation(false); // Reseta o estado de confirmação
+        setView('login'); // Muda para a view de login
+        setSuccessMessage('Cadastro realizado com sucesso! Digite seu WhatsApp ou e-mail para entrar.'); // Mensagem de sucesso
+      } else if (data.user === 'erro') {
+        // Erro retornado pelo backend
+        setError('Não foi possível concluir o cadastro. Por favor, tente novamente.');
+      } else {
+        // Resposta inesperada
+        setError('Erro inesperado. Por favor, tente novamente.');
+      }
+      
+    } catch (err) {
+      setError('Erro ao concluir cadastro. Por favor, tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -256,13 +332,9 @@ const AuthModal = () => {
                     <div className="flex justify-center">
                       <div className="w-16 h-16 rounded-full bg-emerald-50/50 flex items-center justify-center">
                         {view === 'login' ? (
-                          <img
-                            src="https://s3.conexcondo.com.br/fmg/conex-icon.png"
-                            alt="Conex Icon"
-                            className="w-10 h-10"
-                          />
+                          <LogIn className="w-10 h-10 text-emerald-500" />
                         ) : (
-                          <User className="w-10 h-10 text-emerald-500" />
+                          <UserPlus className="w-10 h-10 text-emerald-500" />
                         )}
                       </div>
                     </div>
@@ -273,10 +345,10 @@ const AuthModal = () => {
                         {view === 'login' ? 'Bem-vindo de volta!' : 'Crie sua conta'}
                       </h2>
                       <p className="mt-2 text-gray-600">
-                        {view === 'login'
+                        {successMessage || (view === 'login'
                           ? 'Digite seu WhatsApp ou e-mail para entrar'
                           : 'Preencha seus dados para começar'
-                        }
+                        )}
                       </p>
                     </div>
 
@@ -403,45 +475,124 @@ const AuthModal = () => {
                         </>
                       ) : showSignupConfirmation ? (
                         // Tela de Confirmação de Cadastro
-                        <div className="space-y-4">
-                          <div className="text-center">
-                            <p className="text-sm text-gray-600">
-                              Enviamos um e-mail para <span className="font-medium">{signupData.email}</span> com um código de autenticação
-                            </p>
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+                        >
+                          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                            <div className="flex justify-between items-center mb-4">
+                              <h2 className="text-2xl font-semibold text-gray-900">Complete seu Cadastro</h2>
+                              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+                                <X size={24} />
+                              </button>
+                            </div>
+
+                            <div className="space-y-4">
+                              {/* Dados da empresa */}
+                              <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="text-sm text-gray-600">Empresa</p>
+                                <p className="text-lg font-medium text-gray-900">{signupData.empresaNome}</p>
+                                <p className="text-sm text-gray-600 mt-2">CNPJ</p>
+                                <p className="text-lg font-medium text-gray-900">
+                                  {signupData.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')}
+                                </p>
+                              </div>
+
+                              {/* Formulário de dados do usuário */}
+                              <div className="space-y-3">
+                                {/* WhatsApp */}
+                                <div>
+                                  <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 mb-1">
+                                    WhatsApp
+                                  </label>
+                                  <IMaskInput
+                                    id="whatsapp"
+                                    mask="(00) 00000-0000"
+                                    value={signupData.whatsapp}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                                      handleSignupInputChange('whatsapp', e.target.value)
+                                    }
+                                    placeholder="(00) 00000-0000"
+                                    autoComplete="off"
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
+                                             focus:border-emerald-500 outline-none text-gray-900"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label htmlFor="nome" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Seu Nome
+                                  </label>
+                                  <input
+                                    type="text"
+                                    id="nome"
+                                    value={signupData.nome}
+                                    onChange={(e) => handleSignupInputChange('nome', e.target.value)}
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
+                                             focus:border-emerald-500 outline-none text-gray-900"
+                                    placeholder="Digite seu nome completo"
+                                    autoComplete="off"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label htmlFor="senha" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Senha
+                                  </label>
+                                  <input
+                                    type="password"
+                                    id="senha"
+                                    value={signupData.senha}
+                                    onChange={(e) => handleSignupInputChange('senha', e.target.value)}
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
+                                             focus:border-emerald-500 outline-none text-gray-900"
+                                    placeholder="Crie uma senha segura"
+                                    autoComplete="new-password"
+                                  />
+                                </div>
+                              </div>
+
+                              {error && (
+                                <p className="text-sm text-red-500 mt-2">{error}</p>
+                              )}
+
+                              <button
+                                onClick={handleSignupConfirmation}
+                                disabled={!isSignupValid() || isLoading}
+                                className={`w-full py-2 px-4 rounded-lg text-white font-medium
+                                          ${isSignupValid() && !isLoading
+                                            ? 'bg-emerald-500 hover:bg-emerald-600'
+                                            : 'bg-gray-300 cursor-not-allowed'}`}
+                              >
+                                {isLoading ? (
+                                  <span className="flex items-center justify-center">
+                                    <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                    </svg>
+                                    Concluindo...
+                                  </span>
+                                ) : (
+                                  'Concluir Cadastro'
+                                )}
+                              </button>
+                            </div>
                           </div>
-
-                          {/* Código de Confirmação */}
-                          <div>
-                            <input
-                              type="text"
-                              placeholder="Digite o código enviado"
-                              className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
-                                       focus:border-emerald-500 outline-none text-gray-900"
-                            />
-                          </div>
-
-                          {error && (
-                            <p className="text-sm text-red-500">{error}</p>
-                          )}
-
-                          <button
-                            onClick={handleSubmit}
-                            disabled={isLoading}
-                            className="w-full py-2 px-4 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
-                                     transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isLoading ? 'Confirmando...' : 'Confirmar'}
-                          </button>
-                        </div>
+                        </motion.div>
                       ) : (
                         // Signup Form
                         <div className="space-y-4">
                           {/* CNPJ */}
                           <div>
                             <IMaskInput
+                              type="text"
                               mask="00.000.000/0000-00"
                               value={signupData.cnpj}
-                              onChange={(e: any) => handleSignupInputChange('cnpj', e.target.value)}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                handleSignupInputChange('cnpj', e.target.value)
+                              }
                               placeholder="CNPJ"
                               className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
                                        focus:border-emerald-500 outline-none text-gray-900"
@@ -460,18 +611,6 @@ const AuthModal = () => {
                             />
                           </div>
 
-                          {/* WhatsApp */}
-                          <div>
-                            <IMaskInput
-                              mask="(00) 00000-0000"
-                              value={signupData.whatsapp}
-                              onChange={(e: any) => handleSignupInputChange('whatsapp', e.target.value)}
-                              placeholder="WhatsApp"
-                              className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
-                                       focus:border-emerald-500 outline-none text-gray-900"
-                            />
-                          </div>
-
                           {error && (
                             <p className="text-sm text-red-500">{error}</p>
                           )}
@@ -479,10 +618,22 @@ const AuthModal = () => {
                           <button
                             onClick={handleSignupSubmit}
                             disabled={!isSignupValid() || isLoading}
-                            className="w-full py-2 px-4 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
-                                     transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            className={`w-full py-2 px-4 rounded-lg text-white font-medium
+                                      ${isSignupValid() && !isLoading
+                                        ? 'bg-emerald-500 hover:bg-emerald-600'
+                                        : 'bg-gray-300 cursor-not-allowed'}`}
                           >
-                            {isLoading ? 'Validando...' : 'Validar'}
+                            {isLoading ? (
+                              <span className="flex items-center justify-center">
+                                <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Validando...
+                              </span>
+                            ) : (
+                              'Validar CNPJ'
+                            )}
                           </button>
                         </div>
                       )}
