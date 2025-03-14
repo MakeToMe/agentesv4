@@ -30,10 +30,10 @@ npm run dev
 ./clean.sh
 
 # Build da imagem Docker
-docker build -t dockerconexia/agentesv2:v2.5 .
+docker build -t fmguardia/agentesv2:v2.5 .
 
 # Push para Docker Hub
-docker push dockerconexia/agentesv2:v2.5
+docker push fmguardia/agentesv2:v2.5
 ```
 
 ### Deploy com Docker Swarm
@@ -59,3 +59,21 @@ docker stack deploy -c docker-compose.yml conexia
 - Upload de arquivos para Minio
 - Interface moderna e responsiva
 - Integração com IA para gestão condominial
+
+## Observações Importantes
+
+### Carregamento de Variáveis de Ambiente no Docker
+
+**ATENÇÃO**: Para que as variáveis de ambiente sejam carregadas corretamente no frontend quando executado em Docker, é essencial que o arquivo `index.html` contenha a seguinte linha antes do script principal:
+
+```html
+<script src="/env-config.js"></script>
+```
+
+Este script é gerado dinamicamente pelo container Docker durante a inicialização e substitui as variáveis de ambiente do template. Sem esta referência, o frontend não conseguirá acessar as variáveis de ambiente através do objeto `window.env` e resultará em erros como:
+
+```
+Uncaught Error: Missing Supabase environment variables. Please check your .env file.
+```
+
+Nunca remova esta linha ao fazer alterações no arquivo `index.html`.
