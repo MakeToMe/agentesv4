@@ -30,10 +30,10 @@ npm run dev
 ./clean.sh
 
 # Build da imagem Docker
-docker build -t dockerconexia/agentesv2:v2.2 .
+docker build -t dockerconexia/agentesv2:v2.5 .
 
 # Push para Docker Hub
-docker push dockerconexia/agentesv2:v2.2
+docker push dockerconexia/agentesv2:v2.5
 ```
 
 ### Deploy com Docker Swarm
