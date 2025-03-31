@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   conexia-front:
-    image: dockerconexia/agentesv2:v2.5
+    image: fmguardia/agentesv2:v2.5
     networks:
       - network_public
     environment:
