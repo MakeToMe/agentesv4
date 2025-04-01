@@ -37,7 +37,7 @@ const Hero = () => {
               playsInline
               className="w-full aspect-video object-cover"
             >
-              <source src="https://s3.conexcondo.com.br/conexia/674fbdd286f2f2dc633b9fc7.mp4" type="video/mp4" />
+              <source src="https://newapi.conexcondo.com.br/site/Transforme%20sua%20gest%C3%A3o%20com%20ConexCondo.mp4" type="video/mp4" />
             </video>
           </div>
 
