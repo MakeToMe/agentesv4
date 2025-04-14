@@ -7,6 +7,7 @@ import Projetos from './pages/Projetos';
 import Treinamentos from './pages/Treinamentos';
 import Laboratorio from './pages/Laboratorio';
 import Landing from './pages/Landing';
+import TrialExpired from './pages/TrialExpired/TrialExpired';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { KnowledgeBaseProvider } from './contexts/KnowledgeBaseContext';
@@ -20,8 +21,9 @@ const App: React.FC = () => {
     <ProjectProvider>
       <KnowledgeBaseProvider>
         <Routes>
-          {/* Rota pública - Landing Page */}
+          {/* Rotas públicas */}
           <Route path="/" element={<Landing />} />
+          <Route path="/trial-expired" element={<TrialExpired />} />
 
           {/* Rotas protegidas - Requer autenticação */}
           <Route element={<ProtectedRoute><AppLayout><Outlet /></AppLayout></ProtectedRoute>}>

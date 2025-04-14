@@ -8,6 +8,7 @@ interface UserData {
   user_whatsApp: string;
   user_autorizado: boolean;
   user_perfil: string;
+  created_at: string;
 }
 
 export const useUser = () => {
@@ -28,7 +29,7 @@ export const useUser = () => {
         
         const { data, error } = await supabase
           .from('conex-users')
-          .select('uid, user_nome, user_whatsApp, user_autorizado, user_perfil')
+          .select('uid, user_nome, user_whatsApp, user_autorizado, user_perfil, created_at')
           .eq('uid', userUid)
           .single();
 

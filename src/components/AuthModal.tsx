@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LogIn, UserPlus } from 'lucide-react';
+import { X, LogIn, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { IMaskInput } from 'react-imask';
 import useAuthModal from '../hooks/useAuthModal';
 import useAuth from '../stores/useAuth';
@@ -9,13 +9,16 @@ import { useNavigate } from 'react-router-dom';
 const AuthModal = () => {
   const { isOpen, closeModal, view, setView } = useAuthModal();
   const { setAuth } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const [isWhatsApp, setIsWhatsApp] = useState(true);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showTokenInput, setShowTokenInput] = useState(false);
+  const [showPasswordInput, setShowPasswordInput] = useState(false);
   const [token, setToken] = useState(['', '', '', '', '', '']);
+  const [password, setPassword] = useState('');
   const [userData, setUserData] = useState<{
     empresaUid: string;
     userUid: string;
@@ -70,14 +73,17 @@ const AuthModal = () => {
 
   const isValidInput = () => {
     if (isWhatsApp) {
-      return inputValue.replace(/\D/g, '').length === 11;
+      const digits = inputValue.replace(/\D/g, '').length;
+      return digits === 10 || digits === 11;
     }
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputValue);
   };
 
   const handleSubmit = async () => {
-    if (showTokenInput) {
-      if (token.some(t => !t)) return;
+    if (showTokenInput || showPasswordInput) {
+      // Verificação para WhatsApp (token) ou Email (senha)
+      if (isWhatsApp && token.some(t => !t)) return;
+      if (!isWhatsApp && !password) return;
       
       setIsLoading(true);
       setError('');
@@ -87,11 +93,17 @@ const AuthModal = () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            acao: 'login',
-            token: token.join(''),
-            userId: userData?.userUid,
-          }),
+          body: JSON.stringify(
+            isWhatsApp ? {
+              acao: 'login',
+              token: token.join(''),
+              userId: userData?.userUid,
+            } : {
+              acao: 'loginEMAIL',
+              token: password,
+              userId: userData?.userUid,
+            }
+          ),
         });
 
         const data = await response.json();
@@ -106,14 +118,29 @@ const AuthModal = () => {
           // Fecha o modal e navega para o dashboard
           closeModal();
           navigate('/dashboard');
+        } else if (data.status === 'expirado') {
+          // Armazena os dados de autenticação
+          setAuth(data.userId, data.empresaId, {
+            user_nome: userData?.userNome,
+            user_whatsApp: userData?.whatsapp,
+          });
+          
+          // Fecha o modal e navega para a página de trial expirado
+          closeModal();
+          navigate('/trial-expired');
         } else if (data.status === 'invalido') {
-          setError('Código inválido. Por favor, tente novamente.');
-          setToken(['', '', '', '', '', '']); // Limpa os inputs
-          tokenRefs.current[0]?.focus(); // Foca no primeiro input
+          if (isWhatsApp) {
+            setError('Código inválido. Por favor, tente novamente.');
+            setToken(['', '', '', '', '', '']); // Limpa os inputs
+            tokenRefs.current[0]?.focus(); // Foca no primeiro input
+          } else {
+            setError('Senha inválida. Por favor, tente novamente.');
+            setPassword(''); // Limpa o input de senha
+          }
         }
         
       } catch (error) {
-        setError('Erro ao validar código. Tente novamente.');
+        setError(isWhatsApp ? 'Erro ao validar código. Tente novamente.' : 'Erro ao validar senha. Tente novamente.');
       } finally {
         setIsLoading(false);
       }
@@ -128,10 +155,15 @@ const AuthModal = () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            acao: 'validarWpp',
-            whatsapp: inputValue.replace(/\D/g, ''),
-          }),
+          body: JSON.stringify(
+            isWhatsApp ? {
+              acao: 'validarWpp',
+              whatsapp: inputValue.replace(/\D/g, ''),
+            } : {
+              acao: 'validarEmail',
+              whatsapp: inputValue, // Envia o email no campo whatsapp conforme solicitado
+            }
+          ),
         });
 
         const data = await response.json();
@@ -141,13 +173,17 @@ const AuthModal = () => {
             ...data,
             whatsapp: inputValue
           });
-          setShowTokenInput(true);
+          if (isWhatsApp) {
+            setShowTokenInput(true);
+          } else {
+            setShowPasswordInput(true);
+          }
         } else if (data.status === 'inexistente') {
-          setError('WhatsApp não encontrado');
+          setError(isWhatsApp ? 'WhatsApp não encontrado' : 'E-mail não encontrado');
         }
         
       } catch (error) {
-        setError('Erro ao validar WhatsApp. Tente novamente.');
+        setError(`Erro ao validar ${isWhatsApp ? 'WhatsApp' : 'e-mail'}. Tente novamente.`);
       } finally {
         setIsLoading(false);
       }
@@ -159,7 +195,9 @@ const AuthModal = () => {
     setError('');
     setSuccessMessage('');
     setShowTokenInput(false);
+    setShowPasswordInput(false);
     setToken(['', '', '', '', '', '']);
+    setPassword('');
     setShowSignupConfirmation(false);
     setSignupData({
       cnpj: '',
@@ -185,16 +223,17 @@ const AuthModal = () => {
   const isSignupValid = () => {
     if (showSignupConfirmation) {
       // Validação dos campos da tela de confirmação
+      const whatsappDigits = signupData.whatsapp.replace(/\D/g, '').length;
       return (
-        signupData.whatsapp.replace(/\D/g, '').length === 11 &&
+        (whatsappDigits === 10 || whatsappDigits === 11) &&
         signupData.nome.trim() !== '' &&
-        signupData.senha.trim() !== ''
+        signupData.senha.trim() !== '' &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupData.email)
       );
     }
-    // Validação inicial (apenas CNPJ e email)
+    // Validação inicial (apenas CNPJ)
     return (
-      signupData.cnpj.replace(/\D/g, '').length === 14 &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupData.email)
+      signupData.cnpj.replace(/\D/g, '').length === 14
     );
   };
 
@@ -210,7 +249,6 @@ const AuthModal = () => {
         },
         body: JSON.stringify({
           cnpj: signupData.cnpj.replace(/\D/g, ''),
-          email: signupData.email,
         }),
       });
 
@@ -257,7 +295,8 @@ const AuthModal = () => {
           empresaCnpj: signupData.cnpj.replace(/\D/g, ''),
           whatsapp: signupData.whatsapp.replace(/\D/g, ''),
           nome: signupData.nome,
-          senha: signupData.senha
+          senha: signupData.senha,
+          email: signupData.email
         }),
       });
 
@@ -354,7 +393,7 @@ const AuthModal = () => {
 
                     {/* Form */}
                     <div className="space-y-6">
-                      {showTokenInput ? (
+                      {showTokenInput && isWhatsApp ? (
                         <>
                           <div className="space-y-4">
                             <div className="text-center">
@@ -388,6 +427,62 @@ const AuthModal = () => {
                             <button
                               onClick={handleSubmit}
                               disabled={token.some(t => !t) || isLoading}
+                              className="w-full py-2 px-4 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
+                                       transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isLoading ? 'Validando...' : 'Confirmar'}
+                            </button>
+
+                            <button
+                              onClick={handleReset}
+                              className="w-full text-sm text-gray-500 hover:text-gray-700"
+                            >
+                              Voltar
+                            </button>
+                          </div>
+                        </>
+                      ) : showPasswordInput && !isWhatsApp ? (
+                        <>
+                          <div className="space-y-4">
+                            <div className="text-center">
+                              <p className="text-sm text-gray-600">
+                                Digite sua senha para acessar
+                              </p>
+                            </div>
+
+                            {/* Password Input */}
+                            <div className="relative">
+                              <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => {
+                                  setPassword(e.target.value);
+                                  setError('');
+                                }}
+                                placeholder="Digite sua senha"
+                                className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
+                                         focus:border-emerald-500 outline-none text-gray-900"
+                              />
+                              <button 
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                              >
+                                {showPassword ? (
+                                  <EyeOff size={20} />
+                                ) : (
+                                  <Eye size={20} />
+                                )}
+                              </button>
+                            </div>
+
+                            {error && (
+                              <p className="text-sm text-red-500 text-center">{error}</p>
+                            )}
+
+                            <button
+                              onClick={handleSubmit}
+                              disabled={!password || isLoading}
                               className="w-full py-2 px-4 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
                                        transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             >
@@ -538,19 +633,48 @@ const AuthModal = () => {
                                 </div>
 
                                 <div>
+                                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                                    E-mail
+                                  </label>
+                                  <input
+                                    type="email"
+                                    id="email"
+                                    value={signupData.email}
+                                    onChange={(e) => handleSignupInputChange('email', e.target.value)}
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
+                                             focus:border-emerald-500 outline-none text-gray-900"
+                                    placeholder="seu@email.com"
+                                    autoComplete="email"
+                                  />
+                                </div>
+
+                                <div>
                                   <label htmlFor="senha" className="block text-sm font-medium text-gray-700 mb-1">
                                     Senha
                                   </label>
-                                  <input
-                                    type="password"
-                                    id="senha"
-                                    value={signupData.senha}
-                                    onChange={(e) => handleSignupInputChange('senha', e.target.value)}
-                                    className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
-                                             focus:border-emerald-500 outline-none text-gray-900"
-                                    placeholder="Crie uma senha segura"
-                                    autoComplete="new-password"
-                                  />
+                                  <div className="relative">
+                                    <input
+                                      type={showPassword ? "text" : "password"}
+                                      id="senha"
+                                      value={signupData.senha}
+                                      onChange={(e) => handleSignupInputChange('senha', e.target.value)}
+                                      className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
+                                               focus:border-emerald-500 outline-none text-gray-900"
+                                      placeholder="Crie uma senha segura"
+                                      autoComplete="new-password"
+                                    />
+                                    <button 
+                                      type="button"
+                                      onClick={() => setShowPassword(!showPassword)}
+                                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                                    >
+                                      {showPassword ? (
+                                        <EyeOff size={20} />
+                                      ) : (
+                                        <Eye size={20} />
+                                      )}
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
 
@@ -594,18 +718,6 @@ const AuthModal = () => {
                                 handleSignupInputChange('cnpj', e.target.value)
                               }
                               placeholder="CNPJ"
-                              className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
-                                       focus:border-emerald-500 outline-none text-gray-900"
-                            />
-                          </div>
-
-                          {/* Email */}
-                          <div>
-                            <input
-                              type="email"
-                              value={signupData.email}
-                              onChange={(e) => handleSignupInputChange('email', e.target.value)}
-                              placeholder="E-mail"
                               className="w-full px-4 py-2 border rounded-lg focus:ring-1 focus:ring-emerald-500 
                                        focus:border-emerald-500 outline-none text-gray-900"
                             />

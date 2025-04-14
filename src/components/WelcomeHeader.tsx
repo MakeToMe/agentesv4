@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useUser } from '../hooks/useUser';
 import { useProjetos } from '../hooks/useProjetos';
 import useAuth from '../stores/useAuth';
@@ -63,9 +63,13 @@ const WelcomeHeader: React.FC<WelcomeHeaderProps> = ({
               <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
                 Bem-vindo, {userName}
               </h1>
-              <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Bem-vindo {getWelcomeMessage(route)}
-              </p>
+              {route === 'dashboard' ? (
+                <TrialDaysCounter userData={userData} />
+              ) : (
+                <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>
+                  Bem-vindo {getWelcomeMessage(route)}
+                </p>
+              )}
             </div>
             <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <ThemeToggle />
@@ -119,6 +123,47 @@ const WelcomeHeader: React.FC<WelcomeHeaderProps> = ({
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+// Componente para mostrar o contador de dias de trial
+interface TrialDaysCounterProps {
+  userData: any;
+}
+
+const TrialDaysCounter: React.FC<TrialDaysCounterProps> = ({ userData }) => {
+  const trialDaysLeft = useMemo(() => {
+    if (!userData?.created_at) return 15; // Valor padrão se não houver data de criação
+    
+    const createdDate = new Date(userData.created_at);
+    const today = new Date();
+    
+    // Calcula a diferença em milissegundos
+    const diffTime = Math.abs(today.getTime() - createdDate.getTime());
+    // Converte para dias
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Calcula dias restantes (15 dias de trial - dias passados)
+    const daysLeft = 15 - diffDays;
+    
+    // Retorna 0 se já passou do período de trial
+    return daysLeft > 0 ? daysLeft : 0;
+  }, [userData]);
+
+  return (
+    <div className="mt-1">
+      <p style={{ color: 'var(--text-secondary)' }}>
+        {trialDaysLeft > 0 ? (
+          <span>
+            Você tem <span className="font-bold text-emerald-500">{trialDaysLeft} {trialDaysLeft === 1 ? 'dia' : 'dias'}</span> de trial
+          </span>
+        ) : (
+          <span className="text-red-500 font-medium">
+            Seu período de trial expirou
+          </span>
+        )}
+      </p>
     </div>
   );
 };
